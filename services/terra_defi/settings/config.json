@@ -1,0 +1,14 @@
+{
+  "mk_file": "./settings/mk.bot",
+  "testnet": false,
+  "web_server_url": "http://localhost:5020",
+  "telegram_config_file": "./settings/telegram_group.conf",
+  "email_address": "./settings/emails.bot",
+  "automatic_buy_low": false,
+  "automatic_sell_high": false,
+  "symbols": [
+    "LUNAUSDT|binance_spot",
+    "ANCUSDT|binance_spot",
+    "MIRUSDT|binance_spot"
+  ]
+}

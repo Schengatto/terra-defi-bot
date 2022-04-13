@@ -1,0 +1,40 @@
+---
+version: '3'
+services:
+  price-alert:
+    build: # "context" and "dockerfile" fields have to be under "build"
+      context: ./services/price_alert
+      dockerfile: Dockerfile
+    command: [ "python", "./main.py" ]
+
+  terra-defi:
+    build: # "context" and "dockerfile" fields have to be under "build"
+      context: ./services/terra_defi
+      dockerfile: Dockerfile
+    restart: on-failure:5
+    working_dir: /code
+    command: [ "python", "./main.py" ]
+    network_mode: host
+    volumes:
+      - type: bind
+        source: "./services/terra_defi"
+        target: /code
+        volume:
+          nocopy: true
+    depends_on:
+      - terra-defi-api
+
+  terra-defi-api:
+    build: # "context" and "dockerfile" fields have to be under "build"
+      context: ./services/terra_defi
+      dockerfile: Dockerfile
+    restart: on-failure:5
+    working_dir: /code
+    command: [ "python", "./web_server.py" ]
+    network_mode: host
+    volumes:
+      - type: bind
+        source: "./services/terra_defi"
+        target: /code
+        volume:
+          nocopy: true

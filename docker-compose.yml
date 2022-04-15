@@ -39,6 +39,28 @@ services:
         volume:
           nocopy: true
 
+  terra-defi-api-js:
+      build: # "context" and "dockerfile" fields have to be under "build"
+        context: ./services/terra-defi-js
+        dockerfile: Dockerfile
+      restart: on-failure:5
+      working_dir: /usr/src/app
+      command: [ "npm", "run", "start:prod" ]
+      volumes:
+        - type: bind
+          source: "./services/terra-defi-js/resources"
+          target: /dist/resources
+          volume:
+            nocopy: true
+      ports:
+        - "5020:5020"
+      networks:
+        - postgres
+      environment:
+        - STAGE=docker
+        - DB_HOST=postgres
+        - DB_PORT=${POSTGRES_PORT:-5432}
+
   postgres:
     container_name: postgres_container
     image: postgres

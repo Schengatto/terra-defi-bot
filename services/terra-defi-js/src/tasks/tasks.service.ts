@@ -17,8 +17,6 @@ export class TasksService {
         private tasksRepository: Repository<TaskDao>
     ) {}
 
-    private _tasks = new Array<Task>();
-
     async getTasks(filterDto: GetTasksFilterDto, user: User): Promise<Task[]> {
         const { status, search } = filterDto;
         const query = this.tasksRepository.createQueryBuilder('task');

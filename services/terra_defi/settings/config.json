@@ -1,14 +1,13 @@
 {
   "mk_file": "./settings/mk.bot",
-  "testnet": false,
-  "web_server_url": "http://localhost:5020",
-  "telegram_config_file": "./settings/telegram_group.conf",
+  "testnet": true,
+  "server_port": 5020,
+  "server_port_test": 5120,
+  "web_server_url": "localhost",
+  "telegram_enabled": true,
+  "telegram_config_file": "./settings/telegram_conf/group.conf",
   "email_address": "./settings/emails.bot",
   "automatic_buy_low": false,
   "automatic_sell_high": false,
-  "symbols": [
-    "LUNAUSDT|binance_spot",
-    "ANCUSDT|binance_spot",
-    "MIRUSDT|binance_spot"
-  ]
+  "symbols": []
 }

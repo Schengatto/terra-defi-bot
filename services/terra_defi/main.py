@@ -4,29 +4,53 @@ Created on 2022/04/12
 @author: schengatto@gmail.com
 """
 import json
-import logging
+
 import schedule
-import time
-import requests
 
-from lib.utils import send_telegram_msg
-from core.config_service import ConfigurationService
-from core.events_registry_service import EventsRegistryService
-from core.transactions_registry_service import TransactionsRegistryService
-from core.orders_registry_service import OrdersRegistryService
-from core.core_functions import *
+from core.functions.core_functions import *
+from core.helpers.init_database_helper import InitDatabaseHelper
+from core.repositories.events_repository import EventsRepository, EventType
+from core.repositories.orders_repository import OrdersRepository, OrderType
+from core.repositories.terra_tokens_repository import TerraTokensRepository
+from core.repositories.transactions_repository import TransactionsRepository
+from core.services.config_service import ConfigurationService
+from core.utilities.notifications_utils import send_telegram_msg
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger()
 
+# configuration
 configurationService = ConfigurationService()
-eventsService = EventsRegistryService()
-transactionsService = TransactionsRegistryService()
-ordersService = OrdersRegistryService()
+is_testnet = (not os.getenv("MAINNET") == 'true') if os.getenv(
+    "MAINNET") is not None else configurationService.get_configuration("testnet")
 
-WEB_SERVER_URL = configurationService.get_configuration("web_server_url")
+SERVER_HOST = os.getenv("API_SERVICE_HOST", configurationService.get_configuration('web_server_url'))
+PORT_FIELD = "server_port_test" if is_testnet else "server_port"
+SERVER_PORT = os.getenv("API_SERVICE_PORT", configurationService.get_configuration(PORT_FIELD))
+WEB_SERVER_URL = f"{SERVER_HOST}:{SERVER_PORT}/"
 AUTOMATIC_BUY_LOW = configurationService.get_configuration("automatic_buy_low")
 AUTOMATIC_SELL_HIGH = configurationService.get_configuration("automatic_sell_high")
+IS_TELEGRAM_ENABLED = configurationService.get_configuration("telegram_enabled")
+
+logger.info(f"Service started using node {'testnet' if is_testnet else 'mainnet'}")
+
+# init database helpers
+initDatabaseHelper = InitDatabaseHelper()
+
+# services
+eventsService = EventsRepository()
+transactionsService = TransactionsRepository()
+terraTokensRepository = TerraTokensRepository()
+ordersService = OrdersRepository()
+
+
+def send_telegram_notification(messages=[], images=[]):
+    if IS_TELEGRAM_ENABLED:
+        conf = "./settings/telegram_conf/testnet.conf" if is_testnet else "./settings/telegram_conf/mainnet.conf"
+        send_telegram_msg(messages=messages, images=images, conf=conf)
 
 
 def get_api_token():
@@ -40,185 +64,120 @@ def wallet_balance():
     return r.json()
 
 
-def analyze_symbols():
-    for asset in symbols:
+def get_token_balance(token_contract: str):
+    r = requests.get(f'{WEB_SERVER_URL}/wallet/balance/{token_contract}')
+    return r.json()
+
+
+def process_orders():
+    orders = ordersService.get_orders()
+    orderGroups = {}
+    for order in orders:
+        key = f"{order['terra_pair']}@{order['token']}"
+        if key not in orderGroups:
+            orderGroups[key] = []
+        orderGroups[key].append(order)
+
+    for op in list(orderGroups.keys()):
+        logger.debug(f"OrderGroup: {op}")
         try:
-            event_key = None
-            ordersService.force_resync()
-            symbol = asset.split("|")[0]
-            provider = asset.split("|")[1]
+            terra_pair_id = op.split('@', 1)[0]
+            token_id = op.split('@', 1)[1]
+            # TODO move token contract and pair contract on order object for best performances
+            order_token_symbol = terraTokensRepository.find_token_by_id(token_id)[0]
+            pair = terraTokensRepository.find_pair_by_id(terra_pair_id)[0]
+            token_contract = order_token_symbol["testnet_contract"] if is_testnet else order_token_symbol[
+                "mainnet_contract"]
+            pair_contract = pair["testnet_contract"] if is_testnet else pair["mainnet_contract"]
+            trade_info = check_pair_current_swap_info(pair_contract, token_contract, is_testnet)['trade']
+            current_price = float(trade_info['price'])
+            asked_token_symbol = trade_info['ask']
+            asked_token_address = trade_info['ask_contract']
+            offered_token_symbol = trade_info['offer']
+            offered_token_address = trade_info['offer_contract']
 
-            # trade coin
-            if symbol == "LUNAUSDT":
-                coin = 'uluna'
-            elif symbol == "ANCUSDT":
-                coin = "ANC"
-            elif symbol == "MIRUSDT":
-                coin = "MIR"
-            else:
-                raise Exception(f"Invalid coin: {symbol}")
-
-            orders = ordersService.find_orders_by_symbol(symbol)
-            prices = get_prices(symbol, provider)
-
-            # last 24h performance
-            daily_performance = get_daily_performance(symbol, provider)
-
-            # min and max price for the selected period
-            min_price, max_price = find_min_max(prices)
-            low_price = round(min_price * 1.05, 2)
-            high_price = round(max_price * 0.95, 2)
-            current_price = prices.iloc[-1]["Close"]
-
-            # support and resistances levels
-            levels, supports, resistances = find_supports_and_resistances(prices)
-
-            logger.info(f"Current price {current_price}. Orders: {orders}")
+            logger.info(f"Current price {current_price} {offered_token_symbol}.")
             messages_to_send = []
 
-            # statistics
-            message = f"🔎 Current price: {current_price} | Min: {min_price} | Max: {max_price} " \
-                      f"| Low: {low_price} | High: {high_price} | Perf: {daily_performance}%"
-            event_key = f"{symbol}_Statistics"
-            if not eventsService.recently_notified(event_key, minutes=1140):
-                eventsService.store_event(event_key)
-                logging.info(message)
-                messages_to_send.append(message)
-
-            if current_price <= low_price:
-                message = f"↘️ Low price detected. Current price is {current_price}, minimum price last month: {low_price}! Daily performance {daily_performance}%"
-                event_key = f"{symbol}_LowPrice"
-                if not eventsService.recently_notified(event_key, minutes=720):
-                    eventsService.store_event(event_key)
-                    logging.info(message)
-                    messages_to_send.append(message)
-                    if AUTOMATIC_BUY_LOW:
-                        # BUY HERE
-                        swap_amount = int(wallet_balance()['uusd'] * 0.10)
-                        error, message = buy_coin(coin, swap_amount)
-                        messages_to_send.append(message)
-                        if error:
-                            eventsService.remove_event(event_key)
-
-            if current_price >= high_price:
-                message = f"↗️ High price detected. Current price is {current_price}, maximum price last month: {high_price}! Daily performance {daily_performance}%"
-                event_key = f"{symbol}_HighPrice"
-                if not eventsService.recently_notified(event_key, minutes=720):
-                    eventsService.store_event(event_key)
-                    logging.info(message)
-                    messages_to_send.append(message)
-                    if AUTOMATIC_SELL_HIGH:
-                        # SELL HERE
-                        swap_amount = int(wallet_balance()[coin])
-                        error, message = sell_coin(coin, swap_amount)
-                        messages_to_send.append(message)
-                        if error:
-                            eventsService.remove_event(event_key)
-
-            for order in orders:
-                # target price in a range of 1% from current price
+            for order in orderGroups[op]:
                 order_id = order["id"]
-                if order["type"] in ["BUY", "SELL"] and current_price * 1.003 > float(order["price"]) > current_price * 0.997:
-                    coin = order["coin"]
+                order_type = order["type"]
+                logger.info(f"Order: {order_id} | {order_type}")
+                # target price in a range of 1% from current price
+
+                if order_type in [OrderType.Buy.value, OrderType.Sell.value]:
                     swap_amount = int(order["amount"])
-                    message = f"❗ Current price is {current_price}!!!"
-                    if order["type"] == "BUY":
-                        event_key = f"{symbol}_BUY_{order_id}"
-                        current_ust_balance = int(wallet_balance()['uusd'])
-                        if swap_amount < current_ust_balance:
+                    message = f"Current price is {current_price}!!!"
+                    if order_type == OrderType.Buy.value and current_price * 1.002 > float(
+                            order["price"]) > current_price * 0.995:
+                        logger.info(f"Processing order: {order['type']} @ price {current_price}")
+                        event_name = f"{current_price}_{EventType.TradeBuy.value}_{order_id}"
+                        current_token_balance = int(get_token_balance(offered_token_address)[offered_token_address])
+                        if swap_amount < current_token_balance:
+                            messages_to_send.append(f"❗ {message}")
+                            message = swap_tokens(pair_contract, offered_token_address, asked_token_address,
+                                                  swap_amount, current_price)
                             messages_to_send.append(message)
-                            error, message = buy_coin(coin, swap_amount)
+                            eventsService.store_event(EventType.TradeBuy, event_name, message)
+                            ordersService.set_order_processed(order_id)
+                        else:
+                            raise Exception(f"Insufficient balance: {current_token_balance} {offered_token_symbol}")
+                    elif order_type == OrderType.Sell.value and current_price * 1.005 > float(
+                            order["price"]) > current_price * 0.998:
+                        logger.info(f"Processing order: {order['type']} @ price {current_price}")
+                        event_name = f"{asked_token_symbol}_{EventType.TradeSell.value}_{order_id}"
+                        current_token_balance = int(get_token_balance(offered_token_address)[offered_token_address])
+                        if swap_amount < current_token_balance:
+                            messages_to_send.append(f"❗ {message}")
+                            message = swap_tokens(pair_contract, asked_token_address, offered_token_address,
+                                                  swap_amount, current_price)
                             messages_to_send.append(message)
-                            if not error:
-                                eventsService.store_event(event_key)
-                                ordersService.set_order_processed(symbol, order_id)
-                                # TODO remove
-                                check = ordersService.find_order_by_id(symbol, order_id)
-                                if check["processed"] is False:
-                                    ordersService.remove_order(symbol, order_id)
-                    else:
-                        event_key = f"{symbol}_SELL_{order_id}"
-                        current_coin_balance = int(wallet_balance()[coin])
-                        if swap_amount < current_coin_balance:
-                            messages_to_send.append(message)
-                            error, message = sell_coin(coin, swap_amount)
-                            messages_to_send.append(message)
-                            if not error:
-                                eventsService.store_event(event_key)
-                                ordersService.set_order_processed(symbol, order_id)
-                                # TODO remove
-                                check = ordersService.find_order_by_id(symbol, order_id)
-                                if check["processed"] is False:
-                                    ordersService.remove_order(symbol, order_id)
+                            eventsService.store_event(EventType.TradeSell, event_name, message)
+                            ordersService.set_order_processed(order_id)
+                        else:
+                            raise Exception(f"Insufficient balance: {current_token_balance} {offered_token_symbol}")
 
+                elif order_type == OrderType.Warn.value and current_price * 1.003 > float(
+                        order["price"]) > current_price * 0.997:
+                    event_name = f"{asked_token_symbol}_{EventType.PriceWarning.value}_{order_id}"
+                    message = f"Current price is {current_price}!!!"
+                    eventsService.store_event(EventType.PriceWarning, event_name, message)
+                    messages_to_send.append(f"❗ {message}")
+                    ordersService.set_order_processed(order_id)
 
-                elif order["type"] == "WARN" and current_price * 1.003 > int(order["price"]) > current_price * 0.997:
-                    event_key = f"{symbol}_WARN_{order_id}"
-                    eventsService.store_event(event_key)
-                    messages_to_send.append(f"❗ Current price is {current_price}!!!")
-                    ordersService.set_order_processed(symbol, order_id)
-
-            if len(messages_to_send) > 0:
-                messages_to_send.insert(0, f"{symbol}:")
-                msgs = "\n\n".join(messages_to_send)
-                plot_all(supports, resistances, prices, symbol, provider)
-                send_telegram_msg(messages=[msgs], images=[f"./resources/{symbol}.png"])
+                if len(messages_to_send) > 0:
+                    messages_to_send.insert(0, f"{asked_token_symbol}:")
+                    msgs = "\n\n".join(messages_to_send)
+                    logger.info(msgs)
+                    send_telegram_notification(messages=[msgs])
 
         except Exception as e:
-            msg = f"❌ There was an error processing {asset}: {e}"
+            msg = f"❌ There was an error processing orderGroup {op}: {e}"
             logger.error(msg)
-            raise Exception(e)
-            if event_key is not None:
-                eventsService.remove_event(event_key)
-                # send_telegram_msg(messages=[msg])
+            send_telegram_notification(messages=[msg])
 
 
-def buy_coin(coin, amount):
-    error = False
-    try:
-        params = {
-            "from": "uusd",
-            "to": coin,
-            "amount": str(amount)
-        }
-        headers = {
-            "token": get_api_token()
-        }
-        response = requests.get(f"{WEB_SERVER_URL}/terra/swap", params=params, headers=headers).json()
-        if response["error"]:
-            raise Exception(response["message"])
-        message = response["message"]
-        transactionsService.store_transaction(message)
-    except Exception as e:
-        message = response["message"]
-        error = True
+def swap_tokens(pair_contract: str, offer_contract: str, ask_contract: str, amount, price):
+    params = {
+        "pair_contract": pair_contract,
+        "offer_token_contract": offer_contract,
+        "ask_token_contract": ask_contract,
+        "amount": str(amount)
+    }
+    check_price_resp = requests.get(f"{WEB_SERVER_URL}/terra/swap-price", params=params).json()
+    if float(check_price_resp['price']) > price * 1.01:
+        raise Exception(f"Market price is higher than current price: {check_price_resp['price']} {price}")
+
+    headers = {
+        "token": get_api_token()
+    }
+    response = requests.get(f"{WEB_SERVER_URL}/terra/swap", params=params, headers=headers).json()
+    if response["error"]:
+        raise Exception(response["message"])
+    message = response["message"]
 
     logging.info(message)
-    return error, message
-
-
-def sell_coin(coin, amount):
-    error = False
-    try:
-        params = {
-            "from": coin,
-            "to": "uusd",
-            "amount": str(amount)
-        }
-        headers = {
-            "token": get_api_token()
-        }
-        response = requests.get(f"{WEB_SERVER_URL}/terra/swap", params=params, headers=headers).json()
-        if response["error"]:
-            raise Exception(response["message"])
-        message = response["message"]
-        transactionsService.store_transaction(message)
-    except Exception as e:
-        message = response["message"]
-        error = True
-
-    logging.info(message)
-    return error, message
+    return message
 
 
 def read_mnemonic_key():
@@ -234,16 +193,13 @@ def read_mnemonic_key():
     return " ".join(mk)
 
 
-symbols = configurationService.get_configuration("symbols")
-logger.info(symbols)
-
 mnemonic_key = read_mnemonic_key()
 
 # do logic
-analyze_symbols()
+process_orders()
 
 # next calls are scheduled
-schedule.every(1).minute.do(analyze_symbols)
+schedule.every(1).minute.do(process_orders)
 while True:
     # Checks whether a scheduled task
     # is pending to run or not

@@ -18,6 +18,12 @@
 # Output files
 #**/*.xls
 #**/*.xlsx
+**/*/dist
+**/*/node_modules
+**/*/*prod
 
 # Service private files
 **/*.bot
+
+# Certificates
+**/*.pem

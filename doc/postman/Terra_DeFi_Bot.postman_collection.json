@@ -6,326 +6,635 @@
 	},
 	"item": [
 		{
+			"name": "orders",
+			"item": [
+				{
+					"name": "Order Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "token",
+								"value": "{{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"pair_name\": \"UST-Luna\",\r\n    \"asked_token_symbol\": \"Luna\",\r\n    \"type\": \"BUY\",\r\n    \"price\": 82,\r\n    \"amount\": 1000000000\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "amount",
+									"value": "100000000",
+									"description": "1 UST = 1000000 uusd",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Remove",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/orders?id=07fc3548-e93d-43cd-a74a-1e11541a5b2f",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "07fc3548-e93d-43cd-a74a-1e11541a5b2f"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "wallet",
+			"item": [
+				{
+					"name": "Wallet Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/wallet/transactions",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"wallet",
+								"transactions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Wallet address",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/wallet/address",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"wallet",
+								"address"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Wallet balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/wallet/balance",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"wallet",
+								"balance"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Wallet balance by coin",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/wallet/balance/terra1<WALLET_ADDRESS>",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"wallet",
+								"balance",
+								"terra1<WALLET_ADDRESS>"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "trade",
+			"item": [
+				{
+					"name": "Swap non native",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/terra/swap?from=uusd&to=ANC&amount=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"terra",
+								"swap"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "uusd"
+								},
+								{
+									"key": "token_contract",
+									"value": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc",
+									"disabled": true
+								},
+								{
+									"key": "to",
+									"value": "ANC"
+								},
+								{
+									"key": "amount",
+									"value": "1000"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Swap check current price",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/terra/swap-price?from=uusd&to=ANC",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"terra",
+								"swap-price"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "uusd"
+								},
+								{
+									"key": "token_contract",
+									"value": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc",
+									"disabled": true
+								},
+								{
+									"key": "to",
+									"value": "ANC"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Swap non native to uusd",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/terra/swap?from=ANC&to=uusd&amount=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"terra",
+								"swap"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "ANC"
+								},
+								{
+									"key": "token_contract",
+									"value": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc",
+									"disabled": true
+								},
+								{
+									"key": "to",
+									"value": "uusd"
+								},
+								{
+									"key": "amount",
+									"value": "1000"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Swap native",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/terra/swap-native?from=uluna&to=uusd&amount=1000000",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"terra",
+								"swap-native"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "uluna"
+								},
+								{
+									"key": "to",
+									"value": "uusd"
+								},
+								{
+									"key": "amount",
+									"value": "1000000"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Terra native coins",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/terra/coins",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"terra",
+								"coins"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "events",
+			"item": [
+				{
+					"name": "Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{base_url}}:{{terra_defi_port}}/events",
+							"protocol": "http",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"events"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Events by name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/events/ANCUSDT_L_N",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"events",
+								"ANCUSDT_L_N"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Events by type Copy",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/events/TEST",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"events",
+								"TEST"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "official-terra-resources",
+			"item": [
+				{
+					"name": "TerraSwap Tokens",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"\r",
+									"var verifiedTokens = jsonData.filter(t => t.verified).map(t => `INSERT INTO COINS (name, symbol, icon, mainnet_contract) VALUES ('${t.name}', '${t.symbol}', '${t.icon}', '${t.contract_addr}');`);\r",
+									"console.log(verifiedTokens)\r",
+									"\r",
+									"pm.environment.set(\"tokens\", verifiedTokens);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://api.terraswap.io/tokens",
+							"protocol": "https",
+							"host": [
+								"api",
+								"terraswap",
+								"io"
+							],
+							"path": [
+								"tokens"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "tokens",
+			"item": [
+				{
+					"name": "Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/tokens?symbol=ANC",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"tokens"
+							],
+							"query": [
+								{
+									"key": "symbol",
+									"value": "ANC",
+									"description": "Terra Token symbol (example: UST, LUNA, MIR)"
+								},
+								{
+									"key": "name",
+									"value": "anc",
+									"description": "Terra Token symbol (example: uusd, uluna. Mirror)",
+									"disabled": true
+								},
+								{
+									"key": "mainnet_contract",
+									"value": "terra1<WALLET_ADDRESS>",
+									"description": "Token mainnet contract address",
+									"disabled": true
+								},
+								{
+									"key": "testnet_contract",
+									"value": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc",
+									"description": "Token testnet contract address",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Token Pairs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/tokens-pairs",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"tokens-pairs"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "Luna",
+									"description": "Terra Pair symbol (example: WHALE-UST, ANC-UST)",
+									"disabled": true
+								},
+								{
+									"key": "mainnet_contract",
+									"value": "terra1y0z6ulatz6puwdrjk3lnyltc2vg9rvgwyztrg3",
+									"description": "Pair mainnet contract address",
+									"disabled": true
+								},
+								{
+									"key": "testnet_contract",
+									"value": "",
+									"description": "Pair testnet contract address (not implemented yet)",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Token Pairs Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/tokens-pairs-details?is_testnet=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"tokens-pairs-details"
+							],
+							"query": [
+								{
+									"key": "is_testnet",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Token Pairs Symbols",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/tokens-pairs-available",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"tokens-pairs-available"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Token Pairs Swap Price",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/tokens-pairs-price/terra1dqjt2jm908qaayw5hdl36w50sshmgem37suawr?token_contract=terra1td743l5k5cmfy7tqq202g7vkmdvq35q48u2jfm",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"tokens-pairs-price",
+								"terra1dqjt2jm908qaayw5hdl36w50sshmgem37suawr"
+							],
+							"query": [
+								{
+									"key": "token_contract",
+									"value": "terra1td743l5k5cmfy7tqq202g7vkmdvq35q48u2jfm",
+									"description": "Wanted token mainnet contract address"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tokens by id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}:{{terra_defi_port}}/tokens/d61b673c-66a2-4432-947e-8d63d822f6a5",
+							"host": [
+								"{{base_url}}"
+							],
+							"port": "{{terra_defi_port}}",
+							"path": [
+								"tokens",
+								"d61b673c-66a2-4432-947e-8d63d822f6a5"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Messari",
+			"item": []
+		},
+		{
 			"name": "Health Check",
 			"request": {
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/health",
-					"protocol": "http",
+					"raw": "{{base_url}}:{{terra_defi_port}}/health",
 					"host": [
 						"{{base_url}}"
 					],
 					"port": "{{terra_defi_port}}",
 					"path": [
 						"health"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Wallet Transactions",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/wallet/transactions",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"wallet",
-						"transactions"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Wallet address",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/wallet/address",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"wallet",
-						"address"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Orders",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/orders/list",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"orders",
-						"list"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Order Create",
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "token",
-						"value": "application/x-yaml",
-						"type": "text"
-					}
-				],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/orders/create?symbol=LUNAUSDT&order=BUY&price=20.6&amount=3000",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"orders",
-						"create"
-					],
-					"query": [
-						{
-							"key": "symbol",
-							"value": "LUNAUSDT"
-						},
-						{
-							"key": "order",
-							"value": "BUY"
-						},
-						{
-							"key": "price",
-							"value": "20.6"
-						},
-						{
-							"key": "amount",
-							"value": "3000"
-						}
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Order Remove",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/orders/remove?symbol=LUNAUSDT&id=323e8892-a371-44ab-b0c8-e6f50ff4ec98",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"orders",
-						"remove"
-					],
-					"query": [
-						{
-							"key": "symbol",
-							"value": "LUNAUSDT"
-						},
-						{
-							"key": "id",
-							"value": "323e8892-a371-44ab-b0c8-e6f50ff4ec98"
-						}
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Wallet balance",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/wallet/balance",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"wallet",
-						"balance"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Wallet balance by coin",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/wallet/balance/ANC",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"wallet",
-						"balance",
-						"ANC"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Terra native coins",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/terra/coins",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"terra",
-						"coins"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Swap native",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/terra/swap-native?from=uluna&to=uusd&amount=1000",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"terra",
-						"swap-native"
-					],
-					"query": [
-						{
-							"key": "from",
-							"value": "uluna"
-						},
-						{
-							"key": "to",
-							"value": "uusd"
-						},
-						{
-							"key": "amount",
-							"value": "1000"
-						}
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Swap non native",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/terra/swap?from=uusd&to=ANC&amount=1000",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"terra",
-						"swap"
-					],
-					"query": [
-						{
-							"key": "from",
-							"value": "uusd"
-						},
-						{
-							"key": "token_contract",
-							"value": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc",
-							"disabled": true
-						},
-						{
-							"key": "to",
-							"value": "ANC"
-						},
-						{
-							"key": "amount",
-							"value": "1000"
-						}
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Swap non native to uusd",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://{{base_url}}:{{terra_defi_port}}/terra/swap?from=ANC&to=uusd&amount=1000",
-					"protocol": "http",
-					"host": [
-						"{{base_url}}"
-					],
-					"port": "{{terra_defi_port}}",
-					"path": [
-						"terra",
-						"swap"
-					],
-					"query": [
-						{
-							"key": "from",
-							"value": "ANC"
-						},
-						{
-							"key": "token_contract",
-							"value": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc",
-							"disabled": true
-						},
-						{
-							"key": "to",
-							"value": "uusd"
-						},
-						{
-							"key": "amount",
-							"value": "1000"
-						}
 					]
 				}
 			},

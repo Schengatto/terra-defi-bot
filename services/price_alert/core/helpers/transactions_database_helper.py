@@ -5,12 +5,12 @@ TRANSACTIONS_TABLE = "transactions"
 
 class TransactionsDatabaseHelper:
     def __init__(self):
-        self.__init_database()
+        self.__init_database__()
 
-    def __init_database(self):
-        self.__create_tables()
+    def __init_database__(self):
+        self.__create_transactions_table__()
 
-    def __create_tables(self):
+    def __create_transactions_table__(self):
         create_ = f'''
         CREATE TABLE IF NOT EXISTS public.{TRANSACTIONS_TABLE}
         (
@@ -19,8 +19,11 @@ class TransactionsDatabaseHelper:
             offered_token uuid NOT NULL,
             asked_token uuid NOT NULL,
             price numeric NOT NULL,
-            amount numeric NOT NULL,
+            amount_offered numeric NOT NULL,
+            amount_received numeric NOT NULL,
             transaction_hash varchar NOT NULL,
+            order_id uuid,
+            created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "{TRANSACTIONS_TABLE}_pk" PRIMARY KEY (id),
             CONSTRAINT {TRANSACTIONS_TABLE}_fk_terra_pair
@@ -31,7 +34,10 @@ class TransactionsDatabaseHelper:
              REFERENCES public.terra_tokens (id),
             CONSTRAINT {TRANSACTIONS_TABLE}_fk_terra_tokens2
              foreign key (asked_token)
-             REFERENCES public.terra_tokens (id)
+             REFERENCES public.terra_tokens (id),
+            CONSTRAINT transactions_fk_orders
+             foreign key (order_id)
+             REFERENCES public.orders (id)
         );
         '''
         psql = PostgresSqlConnector()
@@ -40,5 +46,11 @@ class TransactionsDatabaseHelper:
         create_ = f'''
         CREATE UNIQUE INDEX IF NOT EXISTS {TRANSACTIONS_TABLE}_unique_idx_1
         ON public.{TRANSACTIONS_TABLE}(transaction_hash);'''
+        psql = PostgresSqlConnector()
+        psql.create(create_)
+
+        create_ = f'''
+        CREATE INDEX IF NOT EXISTS {TRANSACTIONS_TABLE}_unique_idx_2
+        ON public.{TRANSACTIONS_TABLE}(order_id);'''
         psql = PostgresSqlConnector()
         psql.create(create_)

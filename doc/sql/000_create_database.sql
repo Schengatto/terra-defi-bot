@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS public.price_monitors
     price_symbol uuid NOT NULL,
     name varchar NOT NULL,
 	active boolean NOT NULL DEFAULT true,
+	reliability smallint NOT NULL DEFAULT -1,
 	updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "price_monitors_pk" PRIMARY KEY (id),
     CONSTRAINT price_monitors_fk_price_symbol
@@ -114,7 +115,8 @@ CREATE TABLE IF NOT EXISTS public.orders
 	price numeric NOT NULL,
 	amount numeric,
 	retries smallint DEFAULT 0,
-	processed boolean NOT NULL DEFAULT false,
+	status varchar NOT NULL,
+	description varchar,
 	updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "orders_pk" PRIMARY KEY (id),
     CONSTRAINT orders_fk_terra_pair
@@ -141,17 +143,18 @@ ON public.event_types(name);
 
 
 CREATE TABLE IF NOT EXISTS public.events
-(
-    id uuid NOT NULL DEFAULT uuid_generate_v4(),
-	type uuid NOT NULL,
-	name varchar NOT NULL,
-	message varchar NOT NULL,
-	updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "events_pk" PRIMARY KEY (id),
-    CONSTRAINT events_fk_symbol
-     foreign key (type)
-     REFERENCES public.event_types (id)
-);
+        (
+            id uuid NOT NULL DEFAULT uuid_generate_v4(),
+            type uuid NOT NULL,
+            name varchar NOT NULL,
+            symbol varchar NOT NULL,
+            message varchar NOT NULL,
+            updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "events_pk" PRIMARY KEY (id),
+            CONSTRAINT events_fk_symbol
+             foreign key (type)
+             REFERENCES public.event_types (id)
+        );
 
 
 CREATE TABLE IF NOT EXISTS public.transactions
@@ -161,8 +164,11 @@ CREATE TABLE IF NOT EXISTS public.transactions
     offered_token uuid NOT NULL,
     asked_token uuid NOT NULL,
 	price numeric NOT NULL,
-	amount numeric,
+	amount_offered numeric NOT NULL,
+    amount_received numeric NOT NULL,
 	transaction_hash varchar NOT NULL,
+	order_id uuid,
+	created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "transactions_pk" PRIMARY KEY (id),
     CONSTRAINT transactions_fk_terra_pair
@@ -173,8 +179,44 @@ CREATE TABLE IF NOT EXISTS public.transactions
      REFERENCES public.terra_tokens (id),
     CONSTRAINT transactions_fk_terra_tokens2
      foreign key (asked_token)
-     REFERENCES public.terra_tokens (id)
+     REFERENCES public.terra_tokens (id),
+    CONSTRAINT transactions_fk_orders
+     foreign key (order_id)
+     REFERENCES public.orders (id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS transactions_unique_idx_1
-ON public.event_types(transaction_hash);
+ON public.transactions(transaction_hash);
+
+CREATE INDEX IF NOT EXISTS transactions_unique_idx_2
+ON public.transactions(order_id);
+
+
+CREATE TABLE IF NOT EXISTS public.positions
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+	terra_pair uuid NOT NULL,
+    terra_token uuid NOT NULL,
+	open_transaction uuid NOT NULL,
+	close_transaction uuid,
+	stop_loss_price numeric,
+	trailing_stop_loss boolean NOT NULL default FALSE,
+	take_profit_price numeric,
+	created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "positions_pk" PRIMARY KEY (id),
+    CONSTRAINT positions_fk_terra_pairs
+     foreign key (terra_pair)
+     REFERENCES public.terra_pairs (id),
+    CONSTRAINT positions_fk_terra_tokens
+     foreign key (terra_token)
+     REFERENCES public.terra_tokens (id),
+    CONSTRAINT positions_fk_transactions1
+     foreign key (open_transaction)
+     REFERENCES public.transactions (id)
+    CONSTRAINT positions_fk_transactions2
+     foreign key (close_transaction)
+     REFERENCES public.transactions (id)
+);
+
+

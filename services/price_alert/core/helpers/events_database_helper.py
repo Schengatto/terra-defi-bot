@@ -38,6 +38,7 @@ class EventsDatabaseHelper:
             id uuid NOT NULL DEFAULT uuid_generate_v4(),
             type uuid NOT NULL,
             name varchar NOT NULL,
+            symbol varchar NOT NULL,
             message varchar NOT NULL,
             updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "events_pk" PRIMARY KEY (id),

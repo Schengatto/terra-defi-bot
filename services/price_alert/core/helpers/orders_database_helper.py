@@ -21,7 +21,8 @@ class OrdersDatabaseHelper:
             price numeric NOT NULL,
             amount numeric,
             retries smallint DEFAULT 0,
-            processed boolean NOT NULL DEFAULT false,
+            status varchar NOT NULL,
+            description varchar,
             updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "{ORDERS_TABLE}_pk" PRIMARY KEY (id),
             CONSTRAINT {ORDERS_TABLE}_fk_terra_pair

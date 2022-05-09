@@ -43,6 +43,19 @@ def map_terra_pair_to_entity(raw_row):
     }
 
 
+def map_terra_pair_details_to_entity(raw_row):
+    return {
+        "id": raw_row[0],
+        "name": raw_row[1],
+        "contract": raw_row[2],
+        "protocol": raw_row[3],
+        "token1_symbol": raw_row[4],
+        "token1_contract": raw_row[5],
+        "token2_symbol": raw_row[6],
+        "token2_contract": raw_row[7],
+    }
+
+
 class TerraTokensRepository:
     def __init__(self):
         logger.info("TerraTokensRepository initialized")
@@ -91,7 +104,24 @@ class TerraTokensRepository:
                     WHERE tt.symbol = '{symbol}'
                     ORDER BY tt.is_native, tt.updated'''
         psql = PostgresSqlConnector()
-        return psql.read(read_, mapping=map_terra_token_to_entity)
+        return psql.read(read_, mapping=map_terra_token_to_entity)[0]
+
+    def find_token_by_contract(self, contract: str):
+        read_ = f'''SELECT
+                           tt.id,
+                           tt.name,
+                           tt.symbol,
+                           tt.protocol,
+                           tt.decimal_digits,
+                           tt.icon,
+                           tt.mainnet_contract,
+                           tt.testnet_contract,
+                           tt.is_native,
+                           tt.updated
+                       FROM {TERRA_TOKENS_TABLE} tt
+                       WHERE tt.mainnet_contract = '{contract}' OR tt.testnet_contract = '{contract}';'''
+        psql = PostgresSqlConnector()
+        return psql.read(read_, mapping=map_terra_token_to_entity)[0]
 
     def find_token_by_id(self, token_id: str):
         read_ = f'''SELECT
@@ -109,7 +139,7 @@ class TerraTokensRepository:
                     WHERE tt.id::text = '{token_id}'
                     ORDER BY tt.is_native, tt.updated'''
         psql = PostgresSqlConnector()
-        return psql.read(read_, mapping=map_terra_token_to_entity)
+        return psql.read(read_, mapping=map_terra_token_to_entity)[0]
 
     def find_pair_by_id(self, pair_id: str = None):
         read_ = f'''SELECT
@@ -124,7 +154,22 @@ class TerraTokensRepository:
                         FROM {TERRA_PAIRS_TABLE} tp
                         WHERE tp.id::text = '{pair_id}';'''
         psql = PostgresSqlConnector()
-        return psql.read(read_, mapping=map_terra_pair_to_entity)
+        return psql.read(read_, mapping=map_terra_pair_to_entity)[0]
+
+    def find_pair_by_name(self, pair_name: str = None):
+        read_ = f'''SELECT
+                              tp.id,
+                              tp.name,
+                              tp.asset1,
+                              tp.asset2,
+                              tp.mainnet_contract,
+                              tp.testnet_contract,
+                              tp.protocol,
+                              tp.updated
+                           FROM {TERRA_PAIRS_TABLE} tp
+                           WHERE tp.name = '{pair_name}';'''
+        psql = PostgresSqlConnector()
+        return psql.read(read_, mapping=map_terra_pair_to_entity)[0]
 
     def get_pairs(self, pair_name=None, mainnet_contract=None, testnet_contract=None):
         read_ = f'''SELECT
@@ -144,6 +189,43 @@ class TerraTokensRepository:
             read_ = f"{read_} AND tp.mainnet_contract ILIKE '%{mainnet_contract}%'"
         if testnet_contract is not None:
             read_ = f"{read_} AND tp.name ILIKE '%{testnet_contract}%'"
+        read_ = f"{read_} ORDER BY tp.name;"
+        psql = PostgresSqlConnector()
+        return psql.read(read_, mapping=map_terra_pair_to_entity)
+
+    def get_mainnet_pairs_details(self):
+        read_ = f'''
+        select 
+            tp.id as id,
+            tp.name as pair_name,
+            tp.mainnet_contract as pair_contract,
+            tp.protocol as pair_protocol,
+            tt1.symbol as token1_symbol,
+            tt1.mainnet_contract as token1_contract,
+            tt2.symbol as token2_symbol,
+            tt2.mainnet_contract as token2_contract
+        from terra_pairs tp
+                join terra_tokens tt1 on tt1.id = tp.asset1
+                join terra_tokens tt2 on tt2.id = tp.asset2
+        where tp.mainnet_contract is not NULL;'''
+        psql = PostgresSqlConnector()
+        return psql.read(read_, mapping=map_terra_pair_to_entity)
+
+    def get_testnet_pairs_details(self, ):
+        read_ = f'''
+        select 
+            tp.id as id,
+            tp.name as pair_name,
+            tp.testnet_contract as pair_contract,
+            tp.protocol as pair_protocol,
+            tt1.symbol as token1_symbol,
+            tt1.testnet_contract as token1_contract,
+            tt2.symbol as token2_symbol,
+            tt2.testnet_contract as token2_contract
+        from terra_pairs tp
+                join terra_tokens tt1 on tt1.id = tp.asset1
+                join terra_tokens tt2 on tt2.id = tp.asset2
+        where tp.testnet_contract is not NULL;'''
         psql = PostgresSqlConnector()
         return psql.read(read_, mapping=map_terra_pair_to_entity)
 
@@ -161,6 +243,4 @@ class TerraTokensRepository:
         delete_ = f"DELETE FROM {TERRA_TOKENS_TABLE} WHERE id::text = '{token_id}';"
         psql = PostgresSqlConnector()
         psql.delete(delete_)
-        return self.find_order_by_id(token_id) is None
-
-
+        return self.find_token_by_id(token_id) is None

@@ -14,14 +14,14 @@
 						"method": "POST",
 						"header": [
 							{
-								"key": "token",
+								"key": "auth_token",
 								"value": "{{token}}",
 								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"pair_name\": \"UST-Luna\",\r\n    \"asked_token_symbol\": \"Luna\",\r\n    \"type\": \"BUY\",\r\n    \"price\": 82,\r\n    \"amount\": 1000000000\r\n}",
+							"raw": "{\r\n    \"pair_name\": \"MARS-UST\",\r\n    \"asked_token_symbol\": \"MARS\",\r\n    \"type\": \"BUY\",\r\n    \"price\": 0.48,\r\n    \"amount\": 500000000\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"

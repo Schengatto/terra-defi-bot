@@ -14,10 +14,11 @@ def map_to_entity(raw_row):
         "pair": raw_row[1],
         "offered_token": raw_row[2],
         "asked_token": raw_row[3],
-        "amount": float(raw_row[4]),
-        "price": float(raw_row[5]),
-        "tx_hash": raw_row[6],
-        "updated": raw_row[7]
+        "amount_offered": float(raw_row[4]),
+        "amount_received": float(raw_row[5]),
+        "price": float(raw_row[6]),
+        "tx_hash": raw_row[7],
+        "updated": raw_row[8]
     }
 
 
@@ -28,7 +29,8 @@ class TransactionsRepository:
                         tp.name,
                         tt1.symbol,
                         tt2.symbol,
-                        t.amount,
+                        t.amount_offered,
+                        t.amount_received,
                         t.price,
                         t.transaction_hash,
                         t.updated
@@ -36,6 +38,7 @@ class TransactionsRepository:
                         join terra_pairs tp on t.terra_pair = tp.id
                         join terra_tokens tt1 on t.offered_token = tt1.id
                         join terra_tokens tt2 on t.asked_token = tt2.id
+                    ORDER BY t.updated DESC;
         '''
         psql = PostgresSqlConnector()
         return psql.read(read_, mapping=map_to_entity)
@@ -44,18 +47,22 @@ class TransactionsRepository:
                          terra_pair_contract: str,
                          offered_token_contract: str,
                          asked_token_contract: str,
-                         amount: float,
+                         amount_offered: float,
+                         amount_received: float,
                          price: float,
-                         tx_hash: str):
+                         tx_hash: str,
+                         order_id: str = None):
         insert_ = f'''INSERT
-                    INTO {TRANSACTIONS_TABLE} (terra_pair, offered_token, asked_token, price, amount, transaction_hash)
+                    INTO {TRANSACTIONS_TABLE} (terra_pair, offered_token, asked_token, price, amount_offered, amount_received, transaction_hash, order_id)
                     VALUES(
                         (select id from terra_pairs where mainnet_contract = '{terra_pair_contract}' OR testnet_contract = '{terra_pair_contract}'),
                         (select id from terra_tokens where mainnet_contract = '{offered_token_contract}' OR testnet_contract = '{offered_token_contract}'),
                         (select id from terra_tokens where mainnet_contract = '{asked_token_contract}' OR testnet_contract = '{asked_token_contract}'),
                         {price},
-                        {amount},
-                        '{tx_hash}'
+                        {amount_offered},
+                        {amount_received},
+                        '{tx_hash}',
+                        {"NULL" if order_id is None else f"'{order_id}'"}
                     );
                     '''
         psql = PostgresSqlConnector()

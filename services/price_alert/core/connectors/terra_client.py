@@ -17,7 +17,7 @@ from terra_sdk.core.coins import Coin
 from terra_sdk.core.fee import Fee
 from terra_sdk.client.lcd.api.tx import CreateTxOptions
 
-from core.connectors.core_functions import check_pair_current_swap_info
+from core.functions.core_functions import check_pair_current_swap_info
 from core.repositories.terra_tokens_repository import TerraTokensRepository
 
 terra_coins_repository = TerraTokensRepository()
@@ -29,25 +29,6 @@ TERRA_NATIVE_COINS = ['uaud', 'ucad', 'uchf', 'ucny', 'udkk', 'ueur', 'ugbp', 'u
 
 
 # Extra doc: https://githubhot.com/repo/terra-money/terra.py/issues/52
-
-
-# Deprecated...
-def cw20_tokens(testnet=True):
-    if testnet:
-        return {
-            'MIR': {"pair_address": "terra1cz6qp8lfwht83fh9xm9n94kj04qc35ulga5dl0",
-                    "contract": "terra10llyp6v3j3her8u3ce66ragytu45kcmd9asj3u"},
-            'ANC': {"pair_address": "terra1wfvczps2865j0awnurk9m04u7wdmd6qv3fdnvz",
-                    "contract": "terra1747mad58h0w4y589y3sk84r5efqdev9q4r02pc"},
-        }
-    else:
-        return {
-            'MIR': {"pair_address": "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux",
-                    "contract": "terra15gwkyepfc6xgca5t5zefzwy42uts8l2m4g40k6"},
-            'ANC': {"pair_address": "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3",
-                    "contract": "terra1<WALLET_ADDRESS>"},
-        }
-
 
 def get_lcd_address(testnet=True):
     if testnet:
@@ -91,13 +72,13 @@ class TerraClient:
         return self._terra.bank.balance(self.get_address())[0]
 
     def terra_finder_url(self):
-        return "https://finder.terra.money/testnet/tx/" if self._isTestnet else "https://finder.terra.money/mainnet/tx/"
+        return "https://terrasco.pe/testnet/tx/" if self._isTestnet else "https://terrasco.pe/mainnet/tx/"
 
     def __load_available_coins(self):
         return list(map(lambda t: t['testnet_contract'] if self._isTestnet else t['mainnet_contract'],
                         terra_coins_repository.get_tokens()))
 
-    def get_full_balance(self):
+    def get_full_balance(self, tokens=[]):
         balance = self.get_balance()
 
         # native
@@ -113,12 +94,12 @@ class TerraClient:
                 logger.debug(f"{c}: 0")
 
         # CW20
-        for coin in ['ANC', 'MIR', 'bLuna']:
+        for token_contract in tokens:
             try:
-                balance = self.get_coin_balance(coin)
-                b[coin] = int(balance["result"]["balance"])
+                balance = self.get_coin_balance(token_contract)
+                b[token_contract] = int(balance["result"]["balance"])
             except:
-                logger.debug(f"{coin}: 0")
+                logger.debug(f"{token_contract}: 0")
         return b
 
     def get_coin_balance(self, token_contract):
@@ -231,7 +212,7 @@ class TerraClient:
                                 "offer_asset": {
                                     "info": {
                                         "token": {
-                                            "contract_addr": {ask_token_contract}
+                                            "contract_addr": ask_token_contract
                                         }
                                     },
                                     "amount": f"{amount_to_swap}"
@@ -246,7 +227,7 @@ class TerraClient:
         live_gas_prices = json.loads(urllib.request.urlopen(url_request).read().decode())
 
         # TODO make fee_denoms a param
-        swap_tx = CreateTxOptions(msgs=[swap_msg], gas_prices=live_gas_prices, gas_adjustment='1.5',
+        swap_tx = CreateTxOptions(msgs=[swap_msg], gas_prices=live_gas_prices, gas_adjustment='1.2',
                                   fee_denoms=['uusd'])
         tx = self._wallet.create_and_sign_tx(swap_tx)
         tx_error = True
@@ -268,5 +249,17 @@ class TerraClient:
             logging.error(f"\nError: {tx_error}")
             return f"{tx_error}"
 
+        price = 0
+        amount_received = 0
+        try:
+            if 'wasm' in result.logs[0].events_by_type:
+                amount_received = float(result.logs[0].events_by_type['wasm']['amount'][0])
+                price = float(amount_to_swap) / amount_received
+            elif 'coin_received' in result.logs[0].events_by_type:
+                amount_received = float(result.logs[0].events_by_type['coin_received']['amount'][1].replace(ask_token_contract, ''))
+                price = float(amount_to_swap) / amount_received
+        except:
+            logger.error("Unable to get the amount value from the transaction event 'wasm'")
+
         logger.info(tx)
-        return result.txhash
+        return result.txhash, round(price, 4), amount_received

@@ -72,13 +72,13 @@ class TerraClient:
         return self._terra.bank.balance(self.get_address())[0]
 
     def terra_finder_url(self):
-        return "https://finder.terra.money/testnet/tx/" if self._isTestnet else "https://finder.terra.money/mainnet/tx/"
+        return "https://terrasco.pe/testnet/tx/" if self._isTestnet else "https://terrasco.pe/mainnet/tx/"
 
     def __load_available_coins(self):
         return list(map(lambda t: t['testnet_contract'] if self._isTestnet else t['mainnet_contract'],
                         terra_coins_repository.get_tokens()))
 
-    def get_full_balance(self):
+    def get_full_balance(self, tokens=[]):
         balance = self.get_balance()
 
         # native
@@ -94,12 +94,12 @@ class TerraClient:
                 logger.debug(f"{c}: 0")
 
         # CW20
-        for coin in ['ANC', 'MIR', 'bLuna']:
+        for token_contract in tokens:
             try:
-                balance = self.get_coin_balance(coin)
-                b[coin] = int(balance["result"]["balance"])
+                balance = self.get_coin_balance(token_contract)
+                b[token_contract] = int(balance["result"]["balance"])
             except:
-                logger.debug(f"{coin}: 0")
+                logger.debug(f"{token_contract}: 0")
         return b
 
     def get_coin_balance(self, token_contract):
@@ -212,7 +212,7 @@ class TerraClient:
                                 "offer_asset": {
                                     "info": {
                                         "token": {
-                                            "contract_addr": {ask_token_contract}
+                                            "contract_addr": ask_token_contract
                                         }
                                     },
                                     "amount": f"{amount_to_swap}"
@@ -227,7 +227,7 @@ class TerraClient:
         live_gas_prices = json.loads(urllib.request.urlopen(url_request).read().decode())
 
         # TODO make fee_denoms a param
-        swap_tx = CreateTxOptions(msgs=[swap_msg], gas_prices=live_gas_prices, gas_adjustment='1.5',
+        swap_tx = CreateTxOptions(msgs=[swap_msg], gas_prices=live_gas_prices, gas_adjustment='1.2',
                                   fee_denoms=['uusd'])
         tx = self._wallet.create_and_sign_tx(swap_tx)
         tx_error = True
@@ -250,10 +250,16 @@ class TerraClient:
             return f"{tx_error}"
 
         price = 0
+        amount_received = 0
         try:
-            price = float(amount_to_swap) / float(result.logs[0].events_by_type['wasm']['amount'][0])
+            if 'wasm' in result.logs[0].events_by_type:
+                amount_received = float(result.logs[0].events_by_type['wasm']['amount'][0])
+                price = float(amount_to_swap) / amount_received
+            elif 'coin_received' in result.logs[0].events_by_type:
+                amount_received = float(result.logs[0].events_by_type['coin_received']['amount'][1].replace(ask_token_contract, ''))
+                price = float(amount_to_swap) / amount_received
         except:
             logger.error("Unable to get the amount value from the transaction event 'wasm'")
 
         logger.info(tx)
-        return result.txhash, round(price, 4)
+        return result.txhash, round(price, 4), amount_received

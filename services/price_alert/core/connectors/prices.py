@@ -195,6 +195,31 @@ def get_coingecko_prices(symbol, period="1d"):
     cg = CoinGeckoAPI()
     prices = cg.get_coin_ohlc_by_id(symbol, "usd", days)
     df = pd.DataFrame(prices, columns=['Date', 'Open', 'High', 'Low', "Close"])
+    if period in ["3mo", "1y"]:
+        # retrieve daily detail for last week
+        yearly_prices = df.drop(df.index[:-1])
+        yearly_prices = yearly_prices.drop(yearly_prices.index[:-1])
+        weekly_prices_tmp = cg.get_coin_ohlc_by_id(symbol, "usd", 7)
+        day_prices = [weekly_prices_tmp[x:x+6] for x in range(0, len(weekly_prices_tmp), 6)]
+
+        weekly_prices = []
+        for d in day_prices:
+            day_date = d[0][0]
+            day_open = d[0][1]
+            highers = []
+            lowers = []
+            for d_info in d:
+                highers.append(d_info[2])
+                lowers.append(d_info[3])
+
+            day_high = max(highers)
+            day_low = min(lowers)
+            day_close = d[-1][4]
+            weekly_prices.append([day_date, day_open, day_high, day_low, day_close])
+
+        weekly_df = pd.DataFrame(weekly_prices, columns=['Date', 'Open', 'High', 'Low', "Close"])
+        df = pd.concat([yearly_prices, weekly_df])
+
     df['date'] = df['Date'].apply(lambda x: datetime.fromtimestamp(x / 1e3))
     df.set_index('date', inplace=True)
     return df
@@ -253,4 +278,3 @@ def get_current_bid_ask(symbol, provider="binance_spot"):
 #                        provider="binance_spot"))
 # print(has_symbol_prices("PAXUSDT", provider="binance_spot"))
 # print(get_current_bid_ask("BTCUSDT"))
-

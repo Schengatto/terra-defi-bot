@@ -13,47 +13,53 @@ services:
     ports:
       - "${TERRA_POSTGRES_PORT:-5432}:5432"
     networks:
-      - postgres
+      - no-internet
+      - internet
     restart: unless-stopped
 
   price-alert:
     build: # "context" and "dockerfile" fields have to be under "build"
       context: ./services/price_alert
       dockerfile: Dockerfile
-    restart: on-failure:5
-    command: [ "python", "./main.py" ]
+    restart: unless-stopped
+    command: [ "python", "./price_alert.py" ]
     environment:
-      DB_HOST: localhost
+      DB_HOST: postgres
       DB_PORT: ${TERRA_POSTGRES_PORT:-5432}
       DB_NAME: ${TERRA_POSTGRES_DBNAME:-terra_defi}
       DB_USER: ${TERRA_POSTGRES_USER:-postgres}
       DB_PASSWORD: ${TERRA_POSTGRES_PASSWORD:-changeme}
-      API_SERVICE_HOST: ${TERRA_DEFI_SERVICE_HOST:-http://localhost}
+      API_SERVICE_HOST: http://terra-defi-api
       API_SERVICE_PORT: ${TERRA_DEFI_SERVICE_PORT:-5020}
       USE_TELEGRAM: "true"
-      CHECK_DEFI_PRICE: "false"
-      PLACE_ORDERS: "false"
-    network_mode: host
+      CHECK_DEFI_PRICE: "true"
+      AUTO_BUY: ${TERRA_DEFI_AUTO_BUY:-true}
+      AUTO_BUY_AMOUNT: ${TERRA_DEFI_AUTO_BUY_AMOUNT:-10000000}
+    networks:
+      - no-internet
+      - internet
     depends_on:
-      - postgres
+      - terra-defi-api
 
   terra-defi:
     build: # "context" and "dockerfile" fields have to be under "build"
       context: ./services/terra_defi
       dockerfile: Dockerfile
-    restart: on-failure:5
+    restart: unless-stopped
     working_dir: /code
     command: [ "python", "./main.py" ]
     environment:
-      DB_HOST: localhost
+      DB_HOST: postgres
       DB_PORT: ${TERRA_POSTGRES_PORT:-5432}
       DB_NAME: ${TERRA_POSTGRES_DBNAME:-terra_defi}
       DB_USER: ${TERRA_POSTGRES_USER:-postgres}
       DB_PASSWORD: ${TERRA_POSTGRES_PASSWORD:-changeme}
       MAINNET: ${TERRA_MAINNET:-true}
-      API_SERVICE_HOST: ${TERRA_DEFI_SERVICE_HOST:-http://localhost}
+      API_SERVICE_HOST: http://terra-defi-api
       API_SERVICE_PORT: ${TERRA_DEFI_SERVICE_PORT:-5020}
-    network_mode: host
+    networks:
+      - no-internet
+      - internet
     volumes:
       - type: bind
         source: "./services/terra_defi"
@@ -67,18 +73,22 @@ services:
     build: # "context" and "dockerfile" fields have to be under "build"
       context: ./services/terra_defi
       dockerfile: Dockerfile
-    restart: on-failure:5
+    restart: unless-stopped
     working_dir: /code
     command: [ "python", "./web_server.py" ]
     environment:
-      DB_HOST: localhost
+      DB_HOST: postgres
       DB_PORT: ${TERRA_POSTGRES_PORT:-5432}
       DB_NAME: ${TERRA_POSTGRES_DBNAME:-terra_defi}
       DB_USER: ${TERRA_POSTGRES_USER:-postgres}
       DB_PASSWORD: ${TERRA_POSTGRES_PASSWORD:-changeme}
       MAINNET: ${TERRA_MAINNET:-true}
       API_SERVICE_PORT: ${TERRA_DEFI_SERVICE_PORT:-5020}
-    network_mode: host
+    networks:
+      - no-internet
+      - internet
+    ports:
+      - "${TERRA_DEFI_SERVICE_PORT:-5020}:${TERRA_DEFI_SERVICE_PORT:-5020}"
     volumes:
       - type: bind
         source: "./services/terra_defi"
@@ -88,76 +98,28 @@ services:
     depends_on:
       - postgres
 
-  postgres-testnet:
-    container_name: postgres_container-testnet
-    image: postgres
-    environment:
-      POSTGRES_USER: ${TEST_TERRA_POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${TEST_TERRA_POSTGRES_PASSWORD:-changeme}
-      PGDATA: /data/postgres
-    volumes:
-      - postgres-test:/data/postgres
-    ports:
-      - "${TEST_TERRA_POSTGRES_PORT:-5543}:5432"
+  terra-defi-ui:
+    build: # "context" and "dockerfile" fields have to be under "build"
+      context: ./services/terra_defi_ui
+      dockerfile: Dockerfile
+    restart: on-failure:5
     networks:
-      - postgres-testnet
-    restart: unless-stopped
-
-  terra-defi-testnet:
-    build: # "context" and "dockerfile" fields have to be under "build"
-      context: ./services/terra_defi
-      dockerfile: Dockerfile
-    restart: on-failure:5
-    working_dir: /code
-    command: [ "python", "./main.py" ]
+      - no-internet
+      - internet
+    ports:
+      - "${TEST_TERRA_UI_PORT_HTTP:-5080}:80"
     environment:
-      DB_HOST: localhost
-      DB_PORT: ${TEST_TERRA_POSTGRES_PORT:-5543}
-      DB_NAME: ${TEST_TERRA_POSTGRES_DBNAME:-terra_defi}
-      DB_USER: ${TEST_TERRA_POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${TEST_TERRA_POSTGRES_PASSWORD:-changeme}
-      MAINNET: "false"
-    network_mode: host
-    volumes:
-      - type: bind
-        source: "./services/terra_defi"
-        target: /code
-        volume:
-          nocopy: true
+      API_SERVICE_HOST: ${TERRA_DEFI_SERVICE_HOST:-http://terra-defi-api}
+      API_SERVICE_PORT: ${TERRA_DEFI_SERVICE_PORT:-5020}
     depends_on:
-      - terra-defi-api-testnet
-
-  terra-defi-api-testnet:
-    build: # "context" and "dockerfile" fields have to be under "build"
-      context: ./services/terra_defi
-      dockerfile: Dockerfile
-    restart: on-failure:5
-    working_dir: /code
-    command: [ "python", "./web_server.py" ]
-    environment:
-      DB_HOST: localhost
-      DB_PORT: ${TEST_TERRA_POSTGRES_PORT:-5543}
-      DB_NAME: ${TEST_TERRA_POSTGRES_DBNAME:-terra_defi}
-      DB_USER: ${TEST_TERRA_POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${TEST_TERRA_POSTGRES_PASSWORD:-changeme}
-      MAINNET: "false"
-      SERVICE_PORT: ${TEST_TERRA_DEFI_SERVICE_PORT:-5120}
-    network_mode: host
-    volumes:
-      - type: bind
-        source: "./services/terra_defi"
-        target: /code
-        volume:
-          nocopy: true
-    depends_on:
-      - postgres-testnet
+      - terra-defi-api
 
 networks:
-  postgres:
+  no-internet:
     driver: bridge
-  postgres-testnet:
+    internal: true
+  internet:
     driver: bridge
 
 volumes:
   postgres:
-  postgres-test:

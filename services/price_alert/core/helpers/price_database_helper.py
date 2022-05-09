@@ -69,6 +69,7 @@ class PriceDatabaseHelper:
             price_symbol uuid NOT NULL,
             name varchar NOT NULL,
             active boolean NOT NULL DEFAULT true,
+            reliability smallint NOT NULL DEFAULT -1,
             updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "{PRICE_MONITORS}_pk" PRIMARY KEY (id),
             CONSTRAINT {PRICE_MONITORS}_fk_price_symbol
@@ -100,7 +101,7 @@ class PriceDatabaseHelper:
          (select id from public.terra_pairs where name = 'UST-Luna'),
          (select id from public.terra_tokens where symbol = 'Luna')
         ) ON CONFLICT DO NOTHING;
-        
+
         INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
         VALUES (
          'LUNAUSDT',
@@ -108,7 +109,7 @@ class PriceDatabaseHelper:
          (select id from public.terra_pairs where name = 'UST-Luna'),
          (select id from public.terra_tokens where symbol = 'Luna')
         ) ON CONFLICT DO NOTHING;
-        
+
         INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
         VALUES (
          'ANCUSDT',
@@ -116,7 +117,7 @@ class PriceDatabaseHelper:
          (select id from public.terra_pairs where name = 'ANC-UST'),
          (select id from public.terra_tokens where symbol = 'ANC')
         ) ON CONFLICT DO NOTHING;
-        
+
         INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
         VALUES (
          'MIRUSDT',
@@ -131,13 +132,13 @@ class PriceDatabaseHelper:
         insert_ = f'''
         INSERT INTO public.price_monitors(price_symbol, name)
         VALUES ((select id from public.price_symbols where name = 'LUNAUST'), 'LUNAUST-binance_spot') ON CONFLICT DO NOTHING;
-        
+
         INSERT INTO public.price_monitors(price_symbol, name)
         VALUES ((select id from public.price_symbols where name = 'LUNAUSDT'), 'LUNAUSDT-binance_spot') ON CONFLICT DO NOTHING;
-        
+
         INSERT INTO public.price_monitors(price_symbol, name)
         VALUES ((select id from public.price_symbols where name = 'ANCUSDT'), 'ANCUST-binance_spot') ON CONFLICT DO NOTHING;
-        
+
         INSERT INTO public.price_monitors(price_symbol, name)
         VALUES ((select id from public.price_symbols where name = 'MIRUSDT'), 'MIRUST-binance_spot') ON CONFLICT DO NOTHING;
         '''

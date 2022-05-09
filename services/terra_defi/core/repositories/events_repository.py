@@ -34,9 +34,10 @@ def map_to_entity(raw_row):
         "id": raw_row[0],
         "type": raw_row[1],
         "name": raw_row[2],
-        "message": raw_row[3],
-        "lock_duration": int(raw_row[4]) if raw_row[4] is not None else None,
-        "updated": raw_row[5]
+        "symbol": raw_row[3],
+        "message": raw_row[4],
+        "lock_duration": int(raw_row[5]) if raw_row[5] is not None else None,
+        "updated": raw_row[6]
     }
 
 
@@ -50,6 +51,7 @@ class EventsRepository:
                         e.id,
                         et.name,
                         e.name,
+                        e.symbol,
                         e.message,
                         et.lock_duration,
                         e.updated
@@ -64,6 +66,7 @@ class EventsRepository:
                         e.id,
                         et.name,
                         e.name,
+                        e.symbol,
                         e.message,
                         et.lock_duration,
                         e.updated
@@ -79,6 +82,7 @@ class EventsRepository:
                            e.id,
                            et.name,
                            e.name,
+                           e.symbol,
                            e.message,
                            et.lock_duration,
                            e.updated
@@ -89,10 +93,10 @@ class EventsRepository:
         psql = PostgresSqlConnector()
         return psql.read(read_, mapping=map_to_entity)
 
-    def store_event(self, event_type: EventType, name: str, message: str):
+    def store_event(self, event_type: EventType, name: str, symbol, message: str):
         insert_ = f'''INSERT
-                    INTO {EVENTS_TABLE} (type, name, message)
-                    VALUES((select id from event_types where name = '{event_type.value}'), '{name}', '{message}');
+                    INTO {EVENTS_TABLE} (type, name, symbol, message)
+                    VALUES((select id from event_types where name = '{event_type.value}'), '{name}', '{symbol}', '{message}');
                     '''
         psql = PostgresSqlConnector()
         psql.insert(insert_)

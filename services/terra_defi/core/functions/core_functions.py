@@ -22,8 +22,12 @@ logger = logging.getLogger()
 
 OUTPUT_FOLDER = "./resources/"
 
+API_SERVICE_HOST = os.getenv("API_SERVICE_HOST", 'http://localhost')
+API_SERVICE_PORT = os.getenv("API_SERVICE_PORT", 5020)
+WEB_SERVER_URL = f"{API_SERVICE_HOST}:{API_SERVICE_PORT}"
 
-def get_prices(symbol, provider, period="1mo", interval="8h"):
+
+def get_prices(symbol, provider, period="1y", interval="1d"):
     df = get_symbol_prices(symbol, period=period, interval=interval, provider=provider)
     df['Date'] = pd.to_datetime(df.index)
     df['Date'] = df['Date'].apply(mpl_dates.date2num)
@@ -35,11 +39,22 @@ def get_prices(symbol, provider, period="1mo", interval="8h"):
     return df
 
 
-def get_daily_performance(symbol, provider):
-    p = get_prices(symbol, provider, period="1d")
-    initial = p.iloc[0]["Close"]
-    current = p.iloc[-1]["Close"]
-    return round(((current - initial) / initial) * 100, 2)
+def get_price_performance(prices):
+    y_start = prices.iloc[0]['Open']
+    w_start = prices.iloc[-7]['Open']
+    d_start = prices.iloc[-2]['Close']
+    current = prices.iloc[-1]['Close']
+
+    year = round(((current - y_start) / y_start) * 100, 2)
+    week = round(((current - w_start) / w_start) * 100, 2)
+    day = round(((current - d_start) / d_start) * 100, 2)
+    return day, week, year
+
+
+def get_timeframe_performance(prices):
+    start = prices.iloc[0]['Open']
+    current = prices.iloc[-1]['Close']
+    return round(((current - start) / start) * 100, 2)
 
 
 def find_min_max(prices):
@@ -168,36 +183,98 @@ def create_pdf_report(title, messages=[], images=[]):
     os.remove(f"{OUTPUT_FOLDER}{report_filename}.pdf")
 
 
+def current_ust_prices():
+    # TODO fallback price provider (Coingecko?)
+    response = requests.get("https://api.coinhall.org/api/charts/terra/prices/latest")
+    return response.json()
+
+
 def check_pair_current_swap_info(pair: str, ask_token: str = None, is_testnet=False):
     retries = 3
     base_terra_swap_api_url = "https://api-bombay.terraswap.io" if is_testnet else "https://api.terraswap.io"
-    price_check_url = f"{base_terra_swap_api_url}/dashboard/pairs/{pair}"
-
+    pair_info = f"{base_terra_swap_api_url}/dashboard/pairs/{pair}"
     while retries > 0:
         try:
             # resp: {token = {"tokenAddress": "terra1<WALLET_ADDRESS>", "symbol": "ANC", "price": "2.0474324831"}}
-            data = requests.get(price_check_url).json()
-            token1 = data['token0']
-            token2 = data['token1']
+            data1 = requests.get(pair_info).json()
+            token1_info = data1['token0']
+            token1_info['reserve'] = data1['token0Reserve']
+            token2_info = data1['token1']
+            token2_info['reserve'] = data1['token1Reserve']
+
+            # current price
+            if is_testnet:
+                transactions = f"{base_terra_swap_api_url}/dashboard/txs?page=1&pair={pair}"
+                last_transaction = requests.get(transactions).json()['txs'][0]
+                token1_price = abs(float(last_transaction['token1Amount'])) / abs(
+                    float(last_transaction['token0Amount']))
+                token2_price = abs(float(last_transaction['token0Amount'])) / abs(
+                    float(last_transaction['token1Amount']))
+                token1_info["price"] = token1_price
+                token2_info["price"] = token2_price
+            else:
+                price_ust = current_ust_prices()[pair]
+                if token1_info["tokenAddress"] == "uusd":
+                    token2_price = float(price_ust)
+                    token1_price = float(1 / price_ust)
+                else:
+                    token1_price = float(price_ust)
+                    token2_price = float(1 / price_ust)
+                token1_info["price"] = token1_price
+                token2_info["price"] = token2_price
+
             retries = 0
 
-            if token1['tokenAddress'] == ask_token:
-                return {"token1": token1, "token2": token2,
-                        "trade": {"price": token1['price'], "offer": token2['symbol'], "ask": token1['symbol'],
-                                  "offer_contract": token2["tokenAddress"], "ask_contract": token1['tokenAddress']},
+            if token1_info['tokenAddress'] == ask_token:
+                return {"token1": token1_info, "token2": token2_info,
+                        "trade": {"price": token1_price, "offer": token2_info['symbol'], "ask": token1_info['symbol'],
+                                  "offer_contract": token2_info["tokenAddress"],
+                                  "ask_contract": token1_info['tokenAddress']},
                         }
-            elif token2['tokenAddress'] == ask_token:
-                return {"token1": token1, "token2": token2,
-                        "trade": {"price": token2['price'], "offer": token1['symbol'], "ask": token2['symbol'],
-                                  "offer_contract": token1["tokenAddress"], "ask_contract": token2['tokenAddress']},
+            elif token2_info['tokenAddress'] == ask_token:
+                return {"token1": token1_info, "token2": token2_info,
+                        "trade": {"price": token2_price, "offer": token1_info['symbol'], "ask": token2_info['symbol'],
+                                  "offer_contract": token1_info["tokenAddress"],
+                                  "ask_contract": token2_info['tokenAddress']},
                         }
             elif ask_token is None:
-                return token1, token2
+                return token1_info, token2_info
 
             else:
                 raise Exception(f"Invalid token or pair {pair}")
 
-        except:
-            logging.info(f"Error while contacting {price_check_url}")
+        except Exception as e:
+            logging.info(f"Error while contacting {pair_info}. {e}")
             retries -= 1
             time.sleep(1)
+
+
+def swap_tokens(pair_contract: str = None,
+                offer_contract: str = None,
+                ask_contract: str = None,
+                amount=None,
+                price=None,
+                api_token: str = None):
+    if pair_contract is None or offer_contract is None or ask_contract is None or amount is None or price is None or api_token is None:
+        raise Exception("[swap_token] Invalid arguments")
+
+    params = {
+        "pair_contract": pair_contract,
+        "offer_token_contract": offer_contract,
+        "ask_token_contract": ask_contract,
+        "amount": str(amount)
+    }
+    check_price_resp = requests.get(f"{WEB_SERVER_URL}/terra/swap-price", params=params).json()
+    if float(check_price_resp['price']) > price * 1.01:
+        raise Exception(f"Market price is higher than current price: {check_price_resp['price']} {price}")
+
+    headers = {
+        "token": api_token
+    }
+    response = requests.get(f"{WEB_SERVER_URL}/terra/swap", params=params, headers=headers).json()
+    if response["error"]:
+        raise Exception(response["message"])
+    message = response["message"]
+
+    logging.info(message)
+    return message

@@ -12,13 +12,13 @@ INSERT INTO public.event_types (name, description, lock_duration) VALUES ('ERROR
 INSERT INTO public.price_providers(name, active) VALUES ('binance_spot', true) ON CONFLICT DO NOTHING;
 INSERT INTO public.price_providers(name, active) VALUES ('coingecko', true) ON CONFLICT DO NOTHING;
 
-INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
-VALUES (
- 'LUNAUST',
- (select id from public.price_providers where name = 'binance_spot'),
- (select id from public.terra_pairs where name = 'UST-Luna'),
- (select id from public.terra_tokens where symbol = 'Luna')
-) ON CONFLICT DO NOTHING;
+-- INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
+-- VALUES (
+-- 'LUNAUST',
+--  (select id from public.price_providers where name = 'binance_spot'),
+--  (select id from public.terra_pairs where name = 'UST-Luna'),
+--  (select id from public.terra_tokens where symbol = 'Luna')
+-- ) ON CONFLICT DO NOTHING;
 
 INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
 VALUES (
@@ -100,6 +100,53 @@ VALUES(
  (select id from public.terra_tokens where symbol = 'ASTRO')
 ) ON CONFLICT DO NOTHING;
 
+INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
+VALUES(
+ 'spectrum-token',
+ (select id from public.price_providers where name = 'coingecko'),
+ (select id from public.terra_pairs where name = 'SPEC-UST'),
+ (select id from public.terra_tokens where symbol = 'SPEC')
+) ON CONFLICT DO NOTHING;
+
+-- NEW
+INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
+VALUES(
+ 'mirrored-tesla',
+ (select id from public.price_providers where name = 'coingecko'),
+ (select id from public.terra_pairs where name = 'UST-mTSLA'),
+ (select id from public.terra_tokens where symbol = 'mTSLA')
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
+VALUES(
+ 'mirrored-bitcoin',
+ (select id from public.price_providers where name = 'coingecko'),
+ (select id from public.terra_pairs where name = 'UST-mBTC'),
+ (select id from public.terra_tokens where symbol = 'mBTC')
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.price_symbols(name, price_provider, terra_pair, ask_token)
+VALUES(
+ 'mirrored-ether',
+ (select id from public.price_providers where name = 'coingecko'),
+ (select id from public.terra_pairs where name = 'UST-mETH'),
+ (select id from public.terra_tokens where symbol = 'mETH')
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.price_monitors(price_symbol, name)
+VALUES ((select id from public.price_symbols where name = 'mirrored-ether'), 'mirrored-ether-coingecko') ON CONFLICT DO NOTHING;
+
+INSERT INTO public.price_monitors(price_symbol, name)
+VALUES ((select id from public.price_symbols where name = 'mirrored-bitcoin'), 'mirrored-bitcoin-coingecko') ON CONFLICT DO NOTHING;
+
+INSERT INTO public.price_monitors(price_symbol, name)
+VALUES ((select id from public.price_symbols where name = 'mirrored-tesla'), 'mirrored-tesla-coingecko') ON CONFLICT DO NOTHING;
+
+-- OLD
+
+INSERT INTO public.price_monitors(price_symbol, name)
+VALUES ((select id from public.price_symbols where name = 'spectrum-token'), 'spectrum-token-coingecko') ON CONFLICT DO NOTHING;
+
 INSERT INTO public.price_monitors(price_symbol, name)
 VALUES ((select id from public.price_symbols where name = 'astroport'), 'astroport-coingecko') ON CONFLICT DO NOTHING;
 
@@ -121,8 +168,8 @@ VALUES ((select id from public.price_symbols where name = 'crypto-com-chain'), '
 INSERT INTO public.price_monitors(price_symbol, name)
 VALUES ((select id from public.price_symbols where name = 'mad-meerkat-optimizer'), 'mad-meerkat-optimizer-coingecko') ON CONFLICT DO NOTHING;
 
-INSERT INTO public.price_monitors(price_symbol, name)
-VALUES ((select id from public.price_symbols where name = 'LUNAUST'), 'LUNAUST-binance_spot') ON CONFLICT DO NOTHING;
+-- INSERT INTO public.price_monitors(price_symbol, name)
+-- VALUES ((select id from public.price_symbols where name = 'LUNAUST'), 'LUNAUST-binance_spot') ON CONFLICT DO NOTHING;
 
 INSERT INTO public.price_monitors(price_symbol, name)
 VALUES ((select id from public.price_symbols where name = 'LUNAUSDT'), 'LUNAUSDT-binance_spot') ON CONFLICT DO NOTHING;

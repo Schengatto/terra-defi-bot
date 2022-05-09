@@ -69,6 +69,7 @@ class PriceDatabaseHelper:
             price_symbol uuid NOT NULL,
             name varchar NOT NULL,
             active boolean NOT NULL DEFAULT true,
+            reliability smallint NOT NULL DEFAULT -1,
             updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "{PRICE_MONITORS}_pk" PRIMARY KEY (id),
             CONSTRAINT {PRICE_MONITORS}_fk_price_symbol

@@ -3,7 +3,7 @@
   "testnet": true,
   "server_port": 5020,
   "server_port_test": 5120,
-  "web_server_url": "localhost",
+  "web_server_url": "http://localhost",
   "telegram_enabled": true,
   "telegram_config_file": "./settings/telegram_conf/group.conf",
   "email_address": "./settings/emails.bot",

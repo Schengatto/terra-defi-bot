@@ -49,11 +49,11 @@ def buy_token_and_place_sell(pair_name, asked_token_symbol, price, amount=AUTO_B
     SELL_AMOUNT = float(AUTO_BUY_AMOUNT) / float(price) * 0.97
 
     if reliability == 0:
-        sell_price = price * 1.03
+        sell_price = price * 1.04
     elif reliability > 5:
         sell_price = price * 1.08
     else:
-        sell_price = price * 1.05
+        sell_price = price * 1.06
 
     result = ordersService.store_new_order(pair_name=pair_name,
                                            asked_token_symbol=asked_token_symbol,

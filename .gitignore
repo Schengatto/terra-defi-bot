@@ -28,3 +28,7 @@
 # Certificates
 **/*.pem
 **/nginx/*.conf
+
+# Local secrets
+**/settings/telegram_conf/*.conf
+.env.local
